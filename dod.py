@@ -445,7 +445,7 @@ class DOD():
         p1_time = []
         p2_time = []
         
-        for n in range(2, 102, 4):
+        for n in range(4, 104, 4):
             sh_sum = 0
             p1_sum = 0
             p2_sum = 0
@@ -457,25 +457,25 @@ class DOD():
                 start = time.time()
                 self.decompose(X, method = "sinkhorn", max_iter = max_iter, verbose = verbose)
                 end = time.time()
-                sh_sum += start - end
+                sh_sum += end - start
                 
                 # time procrustes1
                 start = time.time()
                 self.decompose(X, method = "procrustes1", max_iter = max_iter, verbose = verbose)
                 end = time.time()
-                p1_sum += start - end
+                p1_sum += end - start
                 
                 # time procrustes2
                 start = time.time()
                 self.decompose(X, method = "procrustes2", max_iter = max_iter, verbose = verbose)
                 end = time.time()
-                p2_sum += start - end
+                p2_sum += end - start
                 
             sh_time.append(sh_sum / 5)
             p1_time.append(p1_sum / 5)
             p2_time.append(p2_sum / 5)
         
-        x = np.arange(start = 2, stop = 102, step = 4)
+        x = np.arange(start = 4, stop = 104, step = 4)
         plt.figure()
         plt.plot(x, sh_time, color = 'b', label = 'Sinkhorn')
         plt.plot(x, p1_time, color = 'r', label = 'Procrustes1')
