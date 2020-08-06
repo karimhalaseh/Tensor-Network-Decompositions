@@ -3,10 +3,19 @@
 
 import numpy as np
 import numpy.linalg as lg
+import numpy.random as rm
 from scipy.stats import ortho_group
 from tensor_train_interface import TTInterface
+from dod import DOD, sinkhorn, tandem_procrustes
 
 class Orthog_Decomp(TTInterface):
+    """
+    Class for Orthogonal Tensor Train Decompositions of Length 2
+    
+    WARNING: Diagonal-Orthogonal-Diagonal decomposition integral to 
+    orthogonal tensor train decomposition only currently working for the 
+    square case. Thus n_CF = rank_L = rank_R only works
+    """
     def create_tensor(self, lammy, ABC, mu, DEF):
         """
         artificially creates 4-way tensor T that decomposes into two odeco 
@@ -24,14 +33,15 @@ class Orthog_Decomp(TTInterface):
                     + lammy[r_L - 1]*(a_{r_L - 1})x(b_{r_L - 1})x(c_{r_L - 1})
         
         Returns: the L and R tensors, and their contraction T
+        
+        Throws: ValueError if any inputs have incompatible shapes.
         """
         # create odeco tensors
         rank_L = lammy.shape[0]
         
         if (rank_L != ABC[0].shape[1] or rank_L != ABC[1].shape[1] 
             or rank_L != ABC[2].shape[1]):
-            print("Rank of L inconsistent")
-            return 
+            raise ValueError("Rank of L inconsistent")
         
         L = np.zeros((ABC[0].shape[0], ABC[1].shape[0], ABC[2].shape[0]))
         
@@ -45,8 +55,7 @@ class Orthog_Decomp(TTInterface):
         
         if (rank_R != DEF[0].shape[1] or rank_R != DEF[1].shape[1] 
             or rank_R != DEF[2].shape[1]):
-            print("Rank of R inconsistent")
-            return 
+            raise ValueError("Rank of R inconsistent")
         
         R = np.zeros((DEF[0].shape[0], DEF[1].shape[0], DEF[2].shape[0]))
         
@@ -57,62 +66,18 @@ class Orthog_Decomp(TTInterface):
             R += R_j
         
         if (L.shape[2] != R.shape[2]):
-            print("Dimensions of C and F must be equal")
-            return
+            raise ValueError("Dimensions of C and F must be equal")
         
         # contract along one dimension to produce 4-way T
         T = np.tensordot(L, R, axes = (2, 2))
         
         return T, L, R
+    
 
-
-    def sinkhorn(self, X, tolerance = 10e-16, max_iter = 10000):
-        """
-        function that performs adapted sinkhorn algorithm on r_Lxr_R X. 
-        
-        Parameters: matrix with diag-orth-diag decomposition X, tolerance 
-        sets when convergence is deemed to have occurred.
-        
-        Returns positive diagonal r_Lxr_L lammy, r_Rxr_R mu, and r_Lxr_R 
-        Q with orthogonal rows and columns
-        """
-        rank_L = X.shape[0]
-        rank_R = X.shape[1]
-        
-        ones_L = np.ones(rank_L)
-        ones_R = np.ones(rank_R)
-        
-        lammy = ones_L
-        mu = ones_R
-        Q = X
-        
-        for i in range(max_iter):
-            col_sum = np.sum(Q, axis = 0)
-            row_sum = np.sum(Q, axis = 1)
-            
-            if (np.all(np.abs(col_sum - ones_R) < tolerance)
-                      and np.all(np.abs(row_sum - ones_L) < tolerance)):
-                break
-            
-            elif max_iter - i <= 1:
-                print("Sinkhorn convergence not reached")
-                print("\n")
-                return
-            
-            Q = Q / col_sum
-            mu = mu / col_sum
-
-            Q = Q / row_sum[:, None]
-            lammy = lammy / row_sum
-        
-        return lammy, Q, mu
-        
-
-    def decompose(self, T, rank_L, rank_R):
+    def decompose(self, T, rank_L, rank_R, dod_alg = "sinkhorn", max_iter = 1000):
         """
         uses SVD of sum of slices and Sinkhorn's theorem to compute decomposition 
         of T into two orthogonal tensors L and R.
-
         Parameters: tensor to decompose T, ranks of L and R.
         
         Returns: weight values and orthonormal vectors of decomposition
@@ -130,31 +95,21 @@ class Orthog_Decomp(TTInterface):
         E = SVD_EF[2][:rank_R, :].T
         
         # contract to obtain lammy <c, f> mu matrix (dod for diag-orth-diag)
-        dod = np.empty(shape = (rank_L, rank_R)) 
+        X = np.empty(shape = (rank_L, rank_R)) 
         
         for i in range(rank_L):
             for j in range(rank_R):
-                dod_ij = np.tensordot(T, A[:, i], axes=(0, 0))
-                dod_ij = np.tensordot(dod_ij, B[:, i], axes=(0, 0))
-                dod_ij = np.tensordot(dod_ij, D[:, j], axes=(0, 0))
-                dod[i,j] = np.tensordot(dod_ij, E[:, j], axes=(0, 0))
+                X_ij = np.tensordot(T, A[:, i], axes=(0, 0))
+                X_ij = np.tensordot(X_ij, B[:, i], axes=(0, 0))
+                X_ij = np.tensordot(X_ij, D[:, j], axes=(0, 0))
+                X[i,j] = np.tensordot(X_ij, E[:, j], axes=(0, 0))
+                
+        X_dod = DOD()
+        L, C, F, M, iters, conv = DOD.decompose(X_dod, X, method = dod_alg, max_iter = max_iter)
         
-        lammy, Q, mu = self.sinkhorn(dod**2)
+        lammy = np.diag(L)
+        mu = np.diag(M)
         
-        Q = np.sign(dod) * (Q**0.5)
-        lammy = lammy**0.5
-        mu = mu**0.5
-        
-        n = max(rank_L, rank_R)
-        
-        if n == rank_R:
-            F = np.eye(n)
-            C = Q.T
-        
-        else:
-            C = np.eye(n)
-            F = Q
-            
         ABC = (A, B, C)
         DEF = (D, E, F)
         
@@ -187,22 +142,148 @@ class Orthog_Decomp(TTInterface):
         return False
 
         
-    def test(self):
-        pass
-
-
+    def test(self, n_A, n_B, n_CF, n_D, n_E, rank_L, rank_R, iters = 1, threshold = 10e-10, dod_alg = "sinkhorn"):
+        """
+        tests orthogonal decomposition algorithm
+        
+        Parameters: Dimensions of A, B, C & F (which must be equal), D, E, the ranks
+        of the left and right 3-tensors (which must be equal to n_CF for the algorithm
+        to work currently), iters sets number of tests to generate, threshold sets 
+        maximum relative error such that a solution is declared successful
+        """
+        success = 0
+        
+        for i in range(iters):
+            # set up test
+            lammy = rm.randint(low = 1, high = 20, size = rank_L)
+            A = ortho_group.rvs(n_A)[:, :rank_L]
+            B = ortho_group.rvs(n_B)[:, :rank_L]
+            C = ortho_group.rvs(n_CF)[:, :rank_L]
+            
+            mu = rm.randint(low = 1, high = 20, size = rank_R)
+            D = ortho_group.rvs(n_A)[:, :rank_R]
+            E = ortho_group.rvs(n_B)[:, :rank_R]
+            F = ortho_group.rvs(n_CF)[:, :rank_R]
+            
+            T, L, R = self.create_tensor(lammy, (A, B, C), mu, (D, E, F))
+            
+            # decompose
+            lammy_sol, ABC_sol, mu_sol, DEF_sol = self.decompose(T, 2, 2, dod_alg = dod_alg)
+            
+            if self.verify_decomp(lammy_sol, ABC_sol, mu_sol, DEF_sol, T, threshold):
+                success += 1
+            
+        print("Number of successes: %d" % success)
+        
+        
 # RUN TESTS
-lammy = np.ones(2)
-A = ortho_group.rvs(2)
-B = ortho_group.rvs(2)
-C = ortho_group.rvs(2)
+test1 = Orthog_Decomp()
+test1.test(n_A = 2, n_B = 2, n_CF = 2, n_D = 2, n_E = 2, rank_L = 2, rank_R = 2, iters = 1)
 
-mu = np.ones(2)
-D = ortho_group.rvs(2)
-E = ortho_group.rvs(2)
-F = ortho_group.rvs(2)
+# # set up test
+# lammy = rm.randint(low = 1, high = 20, size = 2)
+# A = ortho_group.rvs(2)
+# B = ortho_group.rvs(2)
+# C = ortho_group.rvs(2)
 
-test2 = Orthog_Decomp()
-T, L, R = test2.create_tensor(lammy, (A, B, C), mu, (D, E, F))
-lammy, ABC, mu, DEF = test2.decompose(T, 2, 2)
-print(test2.verify_decomp(lammy, ABC, mu, DEF, T))
+# mu = rm.randint(low = 1, high = 20, size = 2)
+# D = ortho_group.rvs(2)
+# E = ortho_group.rvs(2)
+# F = ortho_group.rvs(2)
+
+# print("Lambda: ")
+# print(lammy)
+# print("\n")
+            
+# print("mu: ")
+# print(mu)
+# print("\n")
+            
+# print("lambda * mu: ")
+# print(np.diag(lammy) @ np.diag(mu))
+# print("\n")
+
+# print("A: ")
+# print(A)
+# print("\n")
+
+# print("B: ")
+# print(B)
+# print("\n")
+    
+# print("C: ")
+# print(C)
+# print("\n")
+
+# print("D: ")
+# print(D)
+# print("\n")
+
+# print("E: ")
+# print(E)
+# print("\n")
+
+# print("F: ")
+# print(F)
+# print("\n")
+
+# print("C * F: ")
+# print(C @ F)
+# print("\n")
+
+# T, L, R = test1.create_tensor(lammy, (A, B, C), mu, (D, E, F))
+
+# # decompose
+# lammy_sol, ABC_sol, mu_sol, DEF_sol = test1.decompose(T, 2, 2)
+# A_sol, B_sol, C_sol = ABC_sol
+# D_sol, E_sol, F_sol = DEF_sol
+
+# print("lammy_sol: ")
+# print(lammy_sol)
+# print("\n")
+
+# print("mu_sol: ")
+# print(mu_sol)
+# print("\n")        
+
+# print("lammy_sol * mu_sol: ")
+# print(np.diag(lammy_sol) @ np.diag(mu_sol))
+# print("\n")
+
+# print("A_sol: ")
+# print(A_sol)
+# print("\n")
+    
+# print("B_sol: ")
+# print(B_sol)
+# print("\n")
+    
+# print("C_sol: ")
+# print(C_sol)
+# print("\n")
+
+# print("D_sol: ")
+# print(D_sol)
+# print("\n")
+    
+# print("E_sol: ")
+# print(E_sol)
+# print("\n")
+    
+# print("F_sol: ")
+# print(F_sol)
+# print("\n")
+            
+# print("C_sol * F_sol: ")
+# print(C_sol @ F_sol)
+# print("\n")
+
+# # print("C found orthogonal? ")
+# # print(C_sol @ C_sol.T)
+# # print("\n")
+
+# # print("F found orthogonal? ")
+# # print(F_sol.T @ F_sol)
+# # print("\n")
+
+# test1.verify_decomp(lammy_sol, ABC_sol, mu_sol, DEF_sol, T)

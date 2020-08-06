@@ -27,14 +27,12 @@ class Symm_Decomp(TTInterface):
         n = U.shape[0]
         
         if n != V.shape[0]:
-            print("Error: symmetric dimensions of A and B must match.")
-            return
+            raise ValueError("Error: symmetric dimensions of A and B must match.")
         
         rank_A = lammy.shape[0]
         
         if rank_A != U.shape[1]:
-            print("Error: number of eigenvalues of A must equal number of eigenvectors")
-            return       
+            raise ValueError("Error: number of eigenvalues of A must equal number of eigenvectors")
         
         A = np.zeros((n, n, n))
         
@@ -47,8 +45,7 @@ class Symm_Decomp(TTInterface):
         rank_B = mu.shape[0]
         
         if rank_B != V.shape[1]:
-            print("Error: number of eigenvalues of B must equal number of eigenvectors")
-            return 
+            raise ValueError("Error: number of eigenvalues of B must equal number of eigenvectors")
         
         B = np.zeros((n, n, n))
         
@@ -268,5 +265,3 @@ class Symm_Decomp(TTInterface):
 # RUN TESTS
 test1 = Symm_Decomp()
 test1.test(n = 25, r_A = 4, r_B = 7, orthogonal = False) 
-print(issubclass(Symm_Decomp, DecompInterface))
-print(issubclass(Orthog_Decomp, DecompInterface))

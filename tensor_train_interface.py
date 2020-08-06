@@ -3,17 +3,10 @@
 
 import abc
 import numpy as np
-import numpy.linalg as lg
 import numpy.random as rm
-from tensorly.tenalg import multi_mode_dot
-from scipy.stats import ortho_group
 
 # Possible TODOs: 
-# - change functionality so you can make A orthogonal, B not etc.
-# - use tensorly for everything
-# - generalize to m > 3
-# - change it so that rank is found, rather than inputted (should be pretty easy,
-#   just take number of non-zero eigenvalues)
+# - change it so that rank is found, rather than inputted (just take number of non-zero eigenvalues)
 
 class TTInterface(metaclass = abc.ABCMeta):
     """
@@ -59,22 +52,22 @@ class TTInterface(metaclass = abc.ABCMeta):
         Returns: Weighted sum of slices S_L from first two modes of T, weighted
         sum of slices S_R from other two modes of T 
         """
-        n_A = T.shape[0]
-        n_B = T.shape[1]
-        n_C = T.shape[2]
-        n_D = T.shape[3]
+        n_1 = T.shape[0]
+        n_2 = T.shape[1]
+        n_3 = T.shape[2]
+        n_4 = T.shape[3]
         
-        weights_L = rm.rand(n_C, n_D) # sampled from Unif[0,1] distribution
-        weights_R = rm.rand(n_A, n_B)
+        weights_L = rm.rand(n_3, n_4) # sampled from Unif[0,1] distribution
+        weights_R = rm.rand(n_1, n_2)
         
-        S_L = np.zeros((n_A, n_B))
-        for i_3 in range(n_C):
-            for i_4 in range(n_D):
+        S_L = np.zeros((n_1, n_2))
+        for i_3 in range(n_3):
+            for i_4 in range(n_4):
                 S_L += weights_L[i_3, i_4] * T[:, :, i_3, i_4]
         
-        S_R = np.zeros((n_C, n_D))
-        for i_1 in range(n_A):
-            for i_2 in range(n_B):
+        S_R = np.zeros((n_3, n_4))
+        for i_1 in range(n_1):
+            for i_2 in range(n_2):
                 S_R += weights_R[i_1, i_2] * T[i_1, i_2, :, :]
                 
         return S_L, S_R
