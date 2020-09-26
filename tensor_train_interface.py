@@ -1,16 +1,11 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import abc
 import numpy as np
 import numpy.random as rm
 
-# Possible TODOs: 
-# - change it so that rank is found, rather than inputted (just take number of non-zero eigenvalues)
-
-class TTInterface(metaclass = abc.ABCMeta):
+class TT2Interface(metaclass = abc.ABCMeta):
     """
-    Interface for tensor train decompositions
+    Interface for tensor train decompositions of length 2 as in "Orthogonal
+    Tensor Network Decompositions" (Halaseh, Muller, Robeva)
     """
     @classmethod
     def __subclasshook__(cls, subclass):
@@ -46,12 +41,23 @@ class TTInterface(metaclass = abc.ABCMeta):
         helper function taking arbitrary weighted sums of slices of T 
         for modes associated with L the "left-end" tensor in the train, and R 
         the "right-end" tensor in the train respectively
-    
-        Parameters: tensor to take sums of slices from T
-        
-        Returns: Weighted sum of slices S_L from first two modes of T, weighted
-        sum of slices S_R from other two modes of T 
+
+        Parameters
+        ----------
+        T : 4-way tensor T
+            Tensor to take sums of slices from T
+
+        Returns
+        -------
+        S_L : 2d array
+            Weighted sum of slices from first two modes of T
+        S_R : 2d array
+            Weighted sum of slices from other two modes of T
         """
+        # check T is a 4-way tensor
+        if len(T.shape) != 4:
+            raise ValueError("T must be a 4-way tensor")
+            
         n_1 = T.shape[0]
         n_2 = T.shape[1]
         n_3 = T.shape[2]
