@@ -1,5 +1,5 @@
 README FOR:
-DecomposeSymmOdecoTensorTrain: A MATAB method to decompose a symmetric, odeco tensor train satisfying the Decreasing Ranks Condition
+DecomposeSymmOdecoTensorTrain: A MATLAB method to decompose a symmetric, odeco tensor train satisfying the Decreasing Ranks Condition
 
 Based on the paper "Orthogonal Decomposition of Tensor Trains" (2020) by Karim Halaseh, Tommi Muller, and Elina Robeva, available at:
 % ARXIV WEBSITE %
