@@ -14,3 +14,4 @@ L = 5; % the length of the train
 [ranks_sol,vecs_sol,coeffs_sol] = decomposeSymmOdecoTrain(T);
 T_sol = constructTensor(vecs_sol,coeffs_sol);
 error = norm(T - T_sol);
+
