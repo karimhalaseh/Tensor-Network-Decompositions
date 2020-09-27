@@ -8,6 +8,6 @@ Before running the script, be sure to install the Tensor Toolbox for MATLAB, ava
 https://www.tensortoolbox.org/
 
 runDecomposeSymmOdecoTrain is a script which generates a test problem and calls DecomposeSymmOdecoTrain to decompose it
-testDecomposeSymmOdecoTrain is a script generating test problems with varying levels of noise to assess the performance of DecomposeSymmOdeco Train
+testDecomposeSymmOdecoTrain is a script generating test problems with varying levels of noise to assess the performance of DecomposeSymmOdecoTrain
 
 After installing Tensor Toolbox, simply click "Run" in MATLAB on runDecomposeSymmOdecoTrain or testDecomposeSymmOdecoTrain
