@@ -1,5 +1,5 @@
 # Tensor-Network-Decompositions
-Implementation of algorithms in "Orthogonal Decomposition of Tensor Trains" (2020) by Karim Halaseh, Tommi Muller, and Elina Robeva. Paper available on arXiv at: %URL%
+Implementation of algorithms in "Orthogonal Decomposition of Tensor Trains" (2020) by Karim Halaseh, Tommi Muller, and Elina Robeva. Paper available on arXiv at: https://arxiv.org/abs/2010.04202
 
 Algorithms for orthogonal tensor trains of length 2 and matrix Diagonal-Orthogonal-Diagonal Decompositon (DODD) 
 (Sections 3, 5, 6 in the paper) are implemented in Python, with the help of the TensorLy package, and are located in the Python folder.
